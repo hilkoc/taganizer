@@ -19,19 +19,17 @@ class ItemStore(object):
         self.con = None
 
     def __del__(self):
-        print('Destroying ItemStore')
         if self.con:
-            print('Closing SQL connection')
+            # print('Closing SQL connection')
             self.con.close()
 
     def connect_db(self):
         try:
             self.con = lite.connect(db_name)
-            cur = self.con.cursor()
-            cur.execute('SELECT SQLITE_VERSION()')
-
-            data = cur.fetchone()
-            print("SQLite version: %s" % data)
+            # cur = self.con.cursor()
+            # cur.execute('SELECT SQLITE_VERSION()')
+            # data = cur.fetchone()
+            # print("SQLite version: %s" % data)
         except lite.Error as e:
             print("Error %s:" % e.args[0])
 
@@ -48,9 +46,16 @@ class ItemStore(object):
         rows = cur.fetchall()
         result = list()
         for row in rows:
-            print(row)
+            # print(row)
             result.append(Item(row[0], row[2], row[1]))
         return result
+
+    def rename_item(self, old_name, new_name):
+        cur = self.con.cursor()
+        cur.execute("UPDATE items set url = :new_url WHERE items.url = :old_url ;" ,
+            {'new_url': new_name, 'old_url': old_name})
+        self.con.commit()
+        return cur.rowcount
 
 
 def initialize_db():
