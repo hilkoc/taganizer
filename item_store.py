@@ -44,10 +44,10 @@ class ItemStore(object):
         cur = self.con.cursor()
         cur.execute('SELECT * FROM items ;')
         rows = cur.fetchall()
-        result = list()
+        result = dict()
         for row in rows:
             # print(row)
-            result.append(Item(row[0], row[2], row[1]))
+            result[row[0]] = Item(row[0], row[2], row[1])
         return result
 
     def rename_item(self, old_name, new_name):
@@ -57,8 +57,34 @@ class ItemStore(object):
         self.con.commit()
         return cur.rowcount
 
+    # query = "with p as (select id from items where url = :purl), "
+    #     "c as (select id from items where url = :curl ) select p.id, c.id from p, c ;"
+    def associate(self, parent_name, child_name):
+        insert_select = ("with p as (select id from items where url = :purl), "
+        "c as (select id from items where url = :curl ) "
+        "INSERT INTO associations (parent, child) select p.id, c.id from p, c ;")
+        cur = self.con.cursor()
+        cur.execute(insert_select, {'purl': parent_name, 'curl': child_name})
+        self.con.commit()
+        return cur.rowcount
+
+    def all_associations(self):
+        cur = self.con.cursor()
+        cur.execute('SELECT parent, child FROM associations ;')
+        result = cur.fetchall()
+        print('rows type is ' + str(type(result)))
+        return result
+
 
 def initialize_db():
     con = db().con
+    # con.execute("DROP TABLE items ;")
+    # con.execute("DROP TABLE associations ;")
     con.execute("CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, url VARCHAR UNIQUE, type VARCHAR) ;")
+    con.execute("CREATE TABLE associations ( "
+        "parent INTEGER REFERENCES items (id) ON DELETE CASCADE , "
+        "child INTEGER REFERENCES items (id) ON DELETE CASCADE, "
+        "PRIMARY KEY (parent, child) ) WITHOUT ROWID ; ")
     return 'database initialized'
+
+#with p as (select id from items where url = 'A'), c as (select id from items where url = 'ab' ) INSERT INTO associations (parent, child) select p.id, c.id from p, c ;

@@ -7,23 +7,23 @@ import item_store
 
 class TestStringMethods(unittest.TestCase):
 
-  def skip_test_split(self):
-      s = 'hello world'
-      self.assertEqual(s.split(), ['hello', 'world'])
-      # check that s.split fails when the separator is not a string
-      with self.assertRaises(TypeError):
+    def skip_test_split(self):
+        s = 'hello world'
+        self.assertEqual(s.split(), ['hello', 'world'])
+        # check that s.split fails when the separator is not a string
+        with self.assertRaises(TypeError):
           s.split(2)
 
 
 class TestItemStore(unittest.TestCase):
-  ''' Test the database interaction. The order of these tests matters.'''
+    ''' Test the database interaction. The order of these tests matters.'''
 
-  @classmethod
-  def setUpClass(cls):
+    @classmethod
+    def setUpClass(cls):
       item_store.db_name = ':memory:'
       item_store.initialize_db()
 
-  def test_create(self):
+    def test_create(self):
       me = Item(9, 'tag','me')
       la = Item(17, 'tag', 'la')
       rowid = item_store.db().create_item(me)
@@ -31,7 +31,7 @@ class TestItemStore(unittest.TestCase):
       rowid = item_store.db().create_item(la)
       self.assertEqual(rowid, 2)
 
-  def test_rename(self):
+    def test_rename(self):
       new_name = 'LabelAnything'
       rowcount = item_store.db().rename_item('la', new_name)
       self.assertEqual(rowcount, 1)
@@ -43,7 +43,7 @@ class TestItemStore(unittest.TestCase):
       rowcount = item_store.db().rename_item('la', new_name)
       self.assertEqual(rowcount, 0)
 
-  def test_select_all(self):
+    def test_select_all(self):
       item_list = item_store.db().select_all()
       self.assertEqual(len(item_list), 2)
       self.assertEqual(type(item_list[0]), Item)
@@ -52,6 +52,17 @@ class TestItemStore(unittest.TestCase):
       self.assertEqual(item_list[1].uid, 2)
       self.assertEqual(item_list[1].typ, 'tag')
 
+    def helper_create_tags(self, *tag_list):
+      for name in tag_list:
+          t = Item(0, 'tag', name)
+          item_store.db().create_item(t)
+
+    def test_add_parent_tag(self):
+        ''' Test that an item can have multiple parents and multiple children. '''
+        # helper_create_tags('A', 'B', 'C', 'ab', 'cc', 'abc', 'aab')
+        helper_create_tags('A', 'B', 'ab')
+        item_store.db().associate('ab', 'A')
+        item_store.db().associate('ab', 'B')
 
 
 if __name__ == '__main__':
