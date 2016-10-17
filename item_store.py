@@ -9,7 +9,7 @@ def db():
     global instance
     if instance is None:
         instance = ItemStore()
-        instance.connect_db()
+        instance.connect_db(db_name)
     return instance
 
 
@@ -23,15 +23,12 @@ class ItemStore(object):
             # print('Closing SQL connection')
             self.con.close()
 
-    def connect_db(self):
+    def connect_db(self, db_name):
         try:
             self.con = lite.connect(db_name)
-            # cur = self.con.cursor()
-            # cur.execute('SELECT SQLITE_VERSION()')
-            # data = cur.fetchone()
-            # print("SQLite version: %s" % data)
         except lite.Error as e:
             print("Error %s:" % e.args[0])
+            raise
 
     # The methods below assume the database is connected
     def create_item(self, item):
@@ -76,8 +73,8 @@ class ItemStore(object):
         return result
 
 
-def initialize_db():
-    con = db().con
+def initialize_db(db_instance):
+    con = db_instance.con
     # con.execute("DROP TABLE items ;")
     # con.execute("DROP TABLE associations ;")
     con.execute("CREATE TABLE items (id INTEGER PRIMARY KEY AUTOINCREMENT, url VARCHAR UNIQUE, type VARCHAR) ;")

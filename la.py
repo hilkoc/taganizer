@@ -15,7 +15,7 @@ def show_item(item, level, indent):
 
 def init(args):
     output('initializing database')
-    result = item_store.initialize_db()
+    result = item_store.initialize_db(item_store.db())
     output(result)
 
 def build_tree(item_dict, pairs_list):

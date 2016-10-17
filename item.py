@@ -1,5 +1,9 @@
 """ Anything is an Item. Files, folder, tags, urls, pieces of text. """
 
+class ItemError(Exception):
+    ''' Custom error class for Item. For example when adding an item as an descendend of itself. '''
+
+
 class Item(object):
     """ Class to represent a taggable item.
     The type can be for example TAG, DIR, URL, TXT, CMD.
@@ -24,6 +28,8 @@ class Item(object):
     def __repr__(self):
         return "Item('%(typ)s', '%(url)s')" % ({'typ': self.typ, 'url': self.url})
 
+    def __eq__(self, other):
+        return self.url == other.url
 
     def _add_parent(self, parent):
         if self.parents is None:
@@ -47,18 +53,15 @@ class Item(object):
     def _traverse(self, next_items, func, *func_args):
         """ Traverse all the children, or all the parents, depending on the next_items() function.
             next_items(item) returns a list of items or None if there are no more."""
-        items = [self]
-        levels = [0]
+        items = [(self,0)]
         while len(items) > 0:
-            current = items.pop()
-            level = levels.pop()
+            current, level = items.pop()
             func(current, level, *func_args)
             next_item_list = next_items(current)
             if next_item_list is not None:
                 level += 1
-                items.extend(next_item_list)  # Extend the list.
-                levels.extend([level] * len(next_item_list))
-            # Do something on the way up
+                items.extend([(x,level) for x in next_item_list])  # Extend the list.
+                # Do something on the way up
 
     def traverse_parents(self, func, *func_args):
         self._traverse(Item.parent_items, func, *func_args)
@@ -67,7 +70,7 @@ class Item(object):
         self._traverse(Item.child_items, func, *func_args)
 
     def _recurse(self, next_items, func, *func_args):
-        """ applies func to the given item and to each of its children.
+        """ applies func to the given item and to each of those returned by next_items(item).
             func takes at least two parameters: item and level.
             func_args is a list of additional arguments passed to func. """
         level = 0
@@ -86,6 +89,19 @@ class Item(object):
 
     def recurse_children(self, func, *func_args):
         self._recurse(Item.child_items, func, *func_args)
+
+    def descendents(self, width_first=True):
+        ''' A generater that returns tuples (item, level) for all descendents of the given item.
+            The first pair returned is (item,0).
+        '''
+        popdex = 0 if width_first else -1
+        items = [(self,0)]
+        while len(items) > 0:
+            current, level = items.pop(popdex)
+            yield (current, level)
+            if current.children is not None:
+                level += 1
+                items.extend([(child, level) for child in current.children.values()])
 
 
 def show_item(item, level, indent):
@@ -107,43 +123,19 @@ def recurse_children(item, func, *func_args):
             level += 1
             for child in item.children.values():
                 recurse(child, level, func, *func_args)
-        # Do something on the way up
+                # Do something on the way up
     recurse(item, level, func, *func_args)
 
 
-def traverse_down(item, func, *func_args):
-    """ Same as recurse_children, but non-recurseive implementation"""
-    # Display itself
-    # If no children => Done
-    # Else => increment level
-    #         repeat with next child
-    items = [item]
-    levels = [0]
-    while len(items) > 0:
-        current = items.pop()
-        level = levels.pop()
-        func(current, level, *func_args)
-        if current.children is not None:
-            children = current.children.values()
-            level += 1
-            items.extend(children)  # Extend at the the list.
-            levels.extend([level] * len(children))
-        # Do something on the way up
-
-
 def traverse_down2(item, func, *func_args):
-    """ Same as recurse_children, but non-recurseive implementation"""
-    items = [item]
-    levels = [0]
+    """ Same as recurse_children, but non-recurseive implementation. Width-first"""
+    items = [(item,0)]
     while len(items) > 0:
-        current = items.pop(0)
-        level = levels.pop(0)
+        current, level = items.pop()
         func(current, level, *func_args)
         if current.children is not None:
-            children = current.children.values()
             level += 1
-            items[0:0] = children  # Extend at the beginning of the list.
-            levels[0:0] = [level] * len(children)
+            items[0:0] = [(child, level) for child in current.children.values()] # Extend at the beginning of the list.
 
 
 def main():
@@ -159,19 +151,10 @@ def main():
     mom.add_child(steven)
     me.add_child(la)
 
-
     recurse_children(dad, show_item, '  ')
-    #print(dad.children)
-    #print(me.children)
-    traverse_down2(mom, show_item, '..')
     print()
-    traverse_down(mom, show_item, '**')
-    me.traverse_parents(show_item, '...')
-    me.traverse_children(show_item, '...')
-    print()
-    print('some recursion')
-    steven.recurse_parents(show_item, '##')
-    mom.recurse_children(show_item, '##')
+    for item, level in descendents(dad, False):
+        show_item(item, level, ',,,,')
 
 if __name__ == '__main__':
     main()
