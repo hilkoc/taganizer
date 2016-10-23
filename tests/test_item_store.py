@@ -1,5 +1,5 @@
-''' Test case for item_store.
-    Must run from directory above. '''
+""" Test case for item_store.
+    Must run from directory above. """
 import unittest
 from item import Item
 import item_store
@@ -16,7 +16,7 @@ class TestStringMethods(unittest.TestCase):
 
 
 class TestItemStore(unittest.TestCase):
-    ''' Test the database interaction. The order of these tests matters.'''
+    """ Test the database interaction. The order of these tests matters."""
 
     @classmethod
     def setUpClass(cls):
@@ -62,7 +62,7 @@ class TestItemStore(unittest.TestCase):
           TestItemStore.test_instance.create_item(t)
 
     def skiptest_zadd_parent_tag(self):
-        ''' Test that an item can have multiple parents and multiple children. '''
+        """ Test that an item can have multiple parents and multiple children. """
         # helper_create_tags('A', 'B', 'C', 'ab', 'cc', 'abc', 'aab')
         TestItemStore.helper_create_tags('A', 'B', 'ab')
         TestItemStore.test_instance.associate('ab', 'A')

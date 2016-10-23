@@ -1,12 +1,11 @@
-''' Test case for item_store.
-    Must run from directory above. '''
+""" Test case for item_store.
+    Must run from directory above. """
 import unittest
-from item import Item
+from item import Item, ItemError
 
 
 class TestItem(unittest.TestCase):
-    ''' Test various methods on Item class.'''
-
+    """ Test various methods on Item class."""
 
     def test_hierarchy(self):
         me = Item(1, 'tag','me')
@@ -47,6 +46,18 @@ class TestItem(unittest.TestCase):
             searched_descendents.append(item)
         self.assertTrue(len(searched_descendents) < 4)
 
+    def test_no_cycles(self):
+        """ Assert that an item can not be added as its own descendent. """
+        a = Item(1, 'tag', 'a')
+        b = Item(2, 'tag', 'b')
+        c = Item(3, 'tag', 'c')
+        d = Item(4, 'tag', 'd')
+        a.add_child(b)
+        a.add_child(c)
+        c.add_child(d)
+        self.assertRaises(ItemError, lambda: a.add_child(a))
+        self.assertRaises(ItemError, b.add_child, a)
+        self.assertRaises(ItemError, d.add_child, a)
 
 if __name__ == '__main__':
     unittest.main()

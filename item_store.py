@@ -26,9 +26,18 @@ class ItemStore(object):
     def connect_db(self, db_name):
         try:
             self.con = lite.connect(db_name)
+            # Foreign keys are disabled by default, so we need to turn them on every time.
+            self.con.cursor().execute("PRAGMA foreign_keys=ON")
         except lite.Error as e:
             print("Error %s:" % e.args[0])
             raise
+
+    def dump_db(self, dump_file):
+        """ dump_file is of type io.TextIOWrapper. """
+        for line in self.con.iterdump():
+            print(line)
+            dump_file.write('%s\n' % line)
+        return 'Database exported'
 
     # The methods below assume the database is connected
     def create_item(self, item):
@@ -43,7 +52,6 @@ class ItemStore(object):
         rows = cur.fetchall()
         result = dict()
         for row in rows:
-            # print(row)
             result[row[0]] = Item(row[0], row[2], row[1])
         return result
 
@@ -51,6 +59,12 @@ class ItemStore(object):
         cur = self.con.cursor()
         cur.execute("UPDATE items set url = :new_url WHERE items.url = :old_url ;" ,
             {'new_url': new_name, 'old_url': old_name})
+        self.con.commit()
+        return cur.rowcount
+
+    def delete_item(self, name):
+        cur = self.con.cursor()
+        cur.execute("DELETE from items where url = :name ;", {'name': name})
         self.con.commit()
         return cur.rowcount
 
@@ -63,13 +77,13 @@ class ItemStore(object):
         cur = self.con.cursor()
         cur.execute(insert_select, {'purl': parent_name, 'curl': child_name})
         self.con.commit()
-        return cur.rowcount
+        return cur.lastrowid
 
     def all_associations(self):
         cur = self.con.cursor()
         cur.execute('SELECT parent, child FROM associations ;')
         result = cur.fetchall()
-        print('rows type is ' + str(type(result)))
+        # print('rows type is ' + str(type(result)))  # list
         return result
 
 
@@ -82,6 +96,19 @@ def initialize_db(db_instance):
         "parent INTEGER REFERENCES items (id) ON DELETE CASCADE , "
         "child INTEGER REFERENCES items (id) ON DELETE CASCADE, "
         "PRIMARY KEY (parent, child) ) WITHOUT ROWID ; ")
+    cr_trig_no_cycles = ("CREATE TRIGGER nocycles BEFORE INSERT ON associations"
+        " BEGIN"
+        " WITH RECURSIVE anc(x) AS ("
+        "   SELECT NEW.parent"
+        "   UNION ALL"
+        "   SELECT parent FROM associations, anc WHERE child = x"
+        " )"
+        " SELECT RAISE(FAIL, \"Item is already a descendent\")"
+        " FROM anc WHERE EXISTS ("
+        " 	SELECT 1 FROM anc WHERE x = NEW.child"
+        " );"
+        " END;")
+    con.execute(cr_trig_no_cycles)
     return 'database initialized'
 
 #with p as (select id from items where url = 'A'), c as (select id from items where url = 'ab' ) INSERT INTO associations (parent, child) select p.id, c.id from p, c ;

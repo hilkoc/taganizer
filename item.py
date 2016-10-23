@@ -1,7 +1,7 @@
 """ Anything is an Item. Files, folder, tags, urls, pieces of text. """
 
 class ItemError(Exception):
-    ''' Custom error class for Item. For example when adding an item as an descendend of itself. '''
+    """ Custom error class for Item. For example when adding an item as an descendend of itself. """
 
 
 class Item(object):
@@ -37,7 +37,11 @@ class Item(object):
         self.parents.setdefault(parent.uid, parent)
 
     def add_child(self, child):
-        """ TODO ensure that a child can never occur as its own ancenstor."""
+        """ Create the parent child association between this and the given item."""
+        # Ensure that a child can never occur as its own ancenstor.
+        for d, level in self.ancestors():
+            if child == d:
+                raise ItemError('Given item %s is already a descendent.' % child.url)
         if self.children is None:
             self.children = dict()
         self.children.setdefault(child.uid, child)
@@ -91,9 +95,9 @@ class Item(object):
         self._recurse(Item.child_items, func, *func_args)
 
     def descendents(self, width_first=True):
-        ''' A generater that returns tuples (item, level) for all descendents of the given item.
+        """ A generater that returns tuples (item, level) for all descendents of the given item.
             The first pair returned is (item,0).
-        '''
+        """
         popdex = 0 if width_first else -1
         items = [(self,0)]
         while len(items) > 0:
@@ -102,6 +106,19 @@ class Item(object):
             if current.children is not None:
                 level += 1
                 items.extend([(child, level) for child in current.children.values()])
+
+    def ancestors(self, width_first=True):
+        """ A generater that returns tuples (item, level) for all ancestors of the given item.
+            The first pair returned is (item,0).
+        """
+        popdex = 0 if width_first else -1
+        items = [(self,0)]
+        while len(items) > 0:
+            current, level = items.pop(popdex)
+            yield (current, level)
+            if current.parents is not None:
+                level -= 1
+                items.extend([(child, level) for child in current.parents.values()])
 
 
 def show_item(item, level, indent):
