@@ -73,7 +73,7 @@ def add_association(args):
 def search(args):
     query = args.query
     output(query)
-    item_dict, pairs_list = item_store.db().search(query[0])
+    item_dict, pairs_list = item_store.db().search(query)
     if False:
         for x in item_dict.values():
             output(x)

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from item import Item
-import sqlite3 as lite
+import sqlite3 as sqlite
 
 db_name = 'la.db'
 
@@ -25,10 +25,10 @@ class ItemStore(object):
 
     def connect_db(self, db_name):
         try:
-            self.con = lite.connect(db_name)
+            self.con = sqlite.connect(db_name)
             # Foreign keys are disabled by default, so we need to turn them on every time.
             self.con.cursor().execute("PRAGMA foreign_keys=ON")
-        except lite.Error as e:
+        except sqlite.Error as e:
             print("Error %s:" % e.args[0])
             raise
 
@@ -88,20 +88,24 @@ class ItemStore(object):
     def search(self, query):
         cur = self.con.cursor()
         # Get the associations.
-        query_descendents = ("WITH RECURSIVE descendents(p, c) AS ( "
-                        	 "  select parent, child from ASSOCIATIONS join items ON items.id = parent "
-                             "  where items.url = :qurl "
-        	                 " UNION ALL "
-        	                 "  SELECT parent, child "
-        	                 "  FROM ASSOCIATIONS join descendents ON parent = c ) ")
+        query_descendents = (
+        "WITH RECURSIVE descendents(p, c, anc_url) AS ( "
+        "  select parent, child, url from ASSOCIATIONS join items ON items.id = parent "
+        "  where items.url IN (" + ", ".join(["?"] * len(query)) + " ) "
+        " UNION ALL "
+        "  SELECT parent, child, anc_url "
+        "  FROM ASSOCIATIONS join descendents ON parent = c ) ")
 
-        query_pairs = query_descendents + " SELECT p as parent, c as child from descendents ; "
-        cur.execute(query_pairs, {'qurl': query})
-        pairs_list = cur.fetchall()
-        query_items = query_descendents + ("SELECT DISTINCT items.* FROM items JOIN descendents "
-                                           " ON descendents.p = items.id OR descendents.c = items.id")
+        query_intersect = (" SELECT c as child from descendents as d"
+        " WHERE d.anc_url = ? ")
+        # query_pairs = query_descendents + " INTERSECT ".join([query_intersect] * len(query))
+        # cur.execute(query_pairs, query*2)
+        pairs_list = []  # cur.fetchall()
+        query_matches = " INTERSECT ".join([query_intersect] * len(query))
+        query_items = query_descendents + " , matched_ids as (" + query_matches + ") SELECT items.* FROM items JOIN matched_ids ON id = child ; "
+
         item_dict = dict()
-        cur.execute(query_items, {'qurl': query})
+        cur.execute(query_items, query * 2)
         rows = cur.fetchall()
         for row in rows:
             item_dict[row[0]] = Item(row[0], row[2], row[1])
