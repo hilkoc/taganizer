@@ -46,15 +46,6 @@ class ItemStore(object):
         self.con.commit()
         return cur.lastrowid
 
-    def select_all(self):
-        cur = self.con.cursor()
-        cur.execute('SELECT * FROM items ;')
-        rows = cur.fetchall()
-        result = dict()
-        for row in rows:
-            result[row[0]] = Item(row[0], row[2], row[1])
-        return result
-
     def rename_item(self, old_name, new_name):
         cur = self.con.cursor()
         cur.execute("UPDATE items set url = :new_url WHERE items.url = :old_url ;" ,
@@ -77,15 +68,44 @@ class ItemStore(object):
         cur = self.con.cursor()
         cur.execute(insert_select, {'purl': parent_name, 'curl': child_name})
         self.con.commit()
-        return cur.lastrowid
+        return 1
 
     def all_associations(self):
         cur = self.con.cursor()
         cur.execute('SELECT parent, child FROM associations ;')
         result = cur.fetchall()
-        # print('rows type is ' + str(type(result)))  # list
         return result
 
+    def select_all(self):
+        cur = self.con.cursor()
+        cur.execute('SELECT * FROM items ;')
+        rows = cur.fetchall()
+        result = dict()
+        for row in rows:
+            result[row[0]] = Item(row[0], row[2], row[1])
+        return result
+
+    def search(self, query):
+        cur = self.con.cursor()
+        # Get the associations.
+        query_descendents = ("WITH RECURSIVE descendents(p, c) AS ( "
+                        	 "  select parent, child from ASSOCIATIONS join items ON items.id = parent "
+                             "  where items.url = :qurl "
+        	                 " UNION ALL "
+        	                 "  SELECT parent, child "
+        	                 "  FROM ASSOCIATIONS join descendents ON parent = c ) ")
+
+        query_pairs = query_descendents + " SELECT p as parent, c as child from descendents ; "
+        cur.execute(query_pairs, {'qurl': query})
+        pairs_list = cur.fetchall()
+        query_items = query_descendents + ("SELECT DISTINCT items.* FROM items JOIN descendents "
+                                           " ON descendents.p = items.id OR descendents.c = items.id")
+        item_dict = dict()
+        cur.execute(query_items, {'qurl': query})
+        rows = cur.fetchall()
+        for row in rows:
+            item_dict[row[0]] = Item(row[0], row[2], row[1])
+        return item_dict, pairs_list
 
 def initialize_db(db_instance):
     con = db_instance.con
@@ -103,7 +123,7 @@ def initialize_db(db_instance):
         "   UNION ALL"
         "   SELECT parent FROM associations, anc WHERE child = x"
         " )"
-        " SELECT RAISE(FAIL, \"Item is already a descendent\")"
+        " SELECT RAISE(ABORT, \"Item is already a descendent\")"
         " FROM anc WHERE EXISTS ("
         " 	SELECT 1 FROM anc WHERE x = NEW.child"
         " );"

@@ -23,7 +23,7 @@ class Item(object):
         self.children = None
 
     def __str__(self):
-        return (str(self.uid) + ': ' + self.url)
+        return (self.typ + ': ' + self.url)
 
     def __repr__(self):
         return "Item('%(typ)s', '%(url)s')" % ({'typ': self.typ, 'url': self.url})

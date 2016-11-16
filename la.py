@@ -70,6 +70,19 @@ def add_association(args):
     output('associated %i item' % rowcount)
 
 
+def search(args):
+    query = args.query
+    output(query)
+    item_dict, pairs_list = item_store.db().search(query[0])
+    if False:
+        for x in item_dict.values():
+            output(x)
+    else:
+        build_tree(item_dict, pairs_list)
+        for root in item_dict.values():
+            if root.parents is None:
+                root.traverse_children(show_item, '  ')
+
 def main(main_args=None):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest='command_name', title='subcommands', description='valid subcommands', help='sub-command help')
@@ -102,6 +115,10 @@ def main(main_args=None):
     parser_rename.add_argument('child_name', help='the child name or url')
     parser_rename.add_argument('parent_name', help='the parent name or url')
     parser_rename.set_defaults(func=add_association)
+    # the parser for the "search" command
+    parser_search = subparsers.add_parser('search', aliases=['s', 'show', 'select'], help='Search for items.')
+    parser_search.add_argument('query', nargs='+', help='The labels to search for.')
+    parser_search.set_defaults(func=search)
 
     args = parser.parse_args(main_args)
 
