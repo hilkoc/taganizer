@@ -1,2 +1,4 @@
-la.db
+tzr.db
 *.pyc
+src/taganizer.egg-info/
+dist/

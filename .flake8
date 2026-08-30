@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 100
+# Ignore rules that conflict with black's formatting:
+#   E203 - whitespace before ':' (black formats slices this way)
+#   W503 - line break before binary operator (black's preferred style)
+extend-ignore = E203, W503
+exclude =
+    .git,
+    .venv,
+    dist,
+    build,
+    __pycache__,
+    *.egg-info

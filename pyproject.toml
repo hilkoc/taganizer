@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=9.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "taganizer"
+dynamic = ["version"]
+authors = [
+  {name = "Hilko", email = "hilkoc@users.noreply.github.com"},
+]
+description = "A tag-based organization system"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+# dependencies = ["sqlite3",]  # Built-in, no need to specify
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",
+    "black>=24",
+    "flake8>=7",
+    "build>=1",
+    "twine>=5",
+]
+
+[project.scripts]
+tzr = "taganizer.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/hilkoc/taganizer"
+Repository = "https://github.com/hilkoc/taganizer"
+
+[tool.black]
+line-length = 100
+target-version = ["py314"]
+
