@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "taganizer",
+  "description": "Claude Code plugins built on Taganizer (tzr), the tag-based item organizer.",
+  "owner": {
+    "name": "Hilko",
+    "url": "https://github.com/hilkoc"
+  },
+  "plugins": [
+    {
+      "name": "tzr-memory",
+      "description": "Persistent memory across sessions and projects: markdown notes indexed and searched with tzr tags.",
+      "source": "./claude-plugin",
+      "category": "productivity"
+    }
+  ]
+}

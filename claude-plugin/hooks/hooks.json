@@ -1,0 +1,17 @@
+{
+  "description": "Show the relevant tzr-memory notes at the start of each session",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/scripts/session-start.sh\"",
+            "timeout": 20,
+            "statusMessage": "Loading tzr-memory..."
+          }
+        ]
+      }
+    ]
+  }
+}

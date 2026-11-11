@@ -1,0 +1,12 @@
+{
+  "name": "tzr-memory",
+  "description": "Persistent memory across sessions and projects: markdown notes indexed and searched with tzr tags.",
+  "author": {
+    "name": "Hilko",
+    "url": "https://github.com/hilkoc"
+  },
+  "homepage": "https://github.com/hilkoc/taganizer/tree/master/claude-plugin",
+  "repository": "https://github.com/hilkoc/taganizer",
+  "license": "MIT",
+  "keywords": ["memory", "tags", "tzr", "taganizer"]
+}
