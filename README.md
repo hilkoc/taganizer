@@ -3,7 +3,8 @@
 Taganizer is a tag-based item organizer. It stores items in SQLite, arranges them
 into a parent/child tag hierarchy, and lets you search by combining tags.
 
-It can be used as tool for agent memory.
+It can be used as a tool for agent memory: the [tzr-memory plugin](claude-plugin/README.md)
+gives Claude Code a persistent memory that is shared across projects.
 
 ## Overview
 
@@ -55,13 +56,26 @@ tzr create url https://example.com
 # Tag one item with another (child, parent)
 tzr tag https://example.com python   # -> "https://example.com tagged with python"
 
-# List items (optionally as a tree)
+# Create an item and tag it in one step (the tags must exist)
+tzr create file ~/notes/packaging.md --tag python
+
+# Show the tags on an item
+tzr tags https://example.com
+
+# List items (optionally as a tree, optionally of one type)
 tzr ls
 tzr ls --tree
+tzr ls --tree --type tag
 
 # Search: intersection of tags, or a union of intersections
 tzr search python
 tzr search python web + news        # (python and web) or news
+
+# Search for one type of item only
+tzr search python --type url
+
+# Remove a tag from an item
+tzr untag https://example.com python
 
 # Rename or delete items
 tzr rename python py
@@ -72,18 +86,37 @@ tzr export
 tzr export my_dump.sql
 ```
 
+### Piping search results into other tools
+
+`tzr search --paths` (`-p`) prints only the matching `file` items, as absolute paths, one per
+line and nothing else. This makes a search the first step of a pipeline: select files by tag,
+then filter them by content.
+
+```bash
+# files tagged python that mention "wheel"
+tzr search python -p | xargs -r grep -l wheel
+
+# the same, safe for file names with spaces: -0 separates the paths with NUL
+tzr search python -p0 | xargs -0r grep -l wheel
+```
+
+A relative item name is resolved against the directory that holds the database file, and `~`
+is expanded. Add `--type dir` to print directories instead of files.
+
 ### Commands
 
 | Command | Description |
 | --- | --- |
 | `tzr init` | Initialize the database schema. |
 | `tzr export [FILE]` | Export the database to an SQL dump file. |
-| `tzr ls` / `tzr list` | List all items (`--tree` shows the association tree). |
-| `tzr create <type> <name>` | Create a new item of the given type. |
+| `tzr ls` / `tzr list` | List all items (`--tree` shows the association tree, `--type` keeps one type). |
+| `tzr create <type> <name>` | Create a new item of type `tag`, `file`, `dir`, `url`, `txt` or `cmd`. `--tag T` (repeatable) also tags it. |
 | `tzr rename <old> <new>` | Rename an item (its type is unchanged). |
 | `tzr delete <name>` | Delete an item (its tag links are removed; other items are unaffected). |
 | `tzr tag <child> <parent>` | Associate an item with a parent tag. |
-| `tzr search <query>...` | Search items by tag; `+` unions groups. |
+| `tzr untag <child> <parent>` | Remove a parent tag from an item. |
+| `tzr tags <name>` | List the tags directly applied to an item. |
+| `tzr search <query>...` | Search items by tag; `+` unions groups. `--type` keeps one type, `-p` / `-0` print paths for piping. |
 
 
 ## Library usage

@@ -122,6 +122,27 @@ class TestItemStore(unittest.TestCase):
         with self.assertRaises(ValueError):  # parent does not exist
             TestItemStore.test_instance.associate("no-such-tag", "A")
 
+    def test_zz_associate_requires_existing_child(self):
+        """associate refuses a child that does not exist instead of reporting success."""
+        before = len(TestItemStore.test_instance.all_associations())
+        with self.assertRaises(ValueError):
+            TestItemStore.test_instance.associate("ab", "no-such-item")
+        self.assertEqual(len(TestItemStore.test_instance.all_associations()), before)
+
+    def test_zz_parents(self):
+        """parents returns the direct parents of an item, ordered by url."""
+        urls = [item.url for item in TestItemStore.test_instance.parents("A")]
+        self.assertEqual(urls, ["ab", "abc"])
+        self.assertEqual(TestItemStore.test_instance.parents("ab"), [])
+        self.assertEqual(TestItemStore.test_instance.parents("no-such-item"), [])
+
+    def test_zzz_dissociate(self):
+        """dissociate removes one link and reports how many rows it removed."""
+        self.assertEqual(TestItemStore.test_instance.dissociate("cc", "C"), 1)
+        self.assertEqual(self._search_urls([["cc"]]), set())
+        self.assertEqual(TestItemStore.test_instance.dissociate("cc", "C"), 0)
+        self.assertEqual(TestItemStore.test_instance.dissociate("no-such-tag", "C"), 0)
+
 
 class TestSqlItemStoreSearch(unittest.TestCase):
     """Verify SqlItemStore's single-query search matches the Python union."""

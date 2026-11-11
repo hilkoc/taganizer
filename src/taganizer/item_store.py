@@ -203,13 +203,18 @@ class ItemStore(object):
             True on success.
 
         Raises:
-            ValueError: If parent_name is missing or is not a TAG.
+            ValueError: If parent_name is missing or is not a TAG, or if
+                child_name does not exist.
             sqlite.Error: If the association creation fails.
         """
         parent = self.get_item(parent_name)
         if parent is None or parent.typ.upper() != "TAG":
             found = "no such item" if parent is None else parent.typ
             raise ValueError("parent %r must be a TAG, but is %s" % (parent_name, found))
+        if self.get_item(child_name) is None:
+            # Without this check the INSERT ... SELECT below would insert zero rows
+            # and the call would report success for an item that does not exist.
+            raise ValueError("no such item %r" % child_name)
         insert_select = (
             "with p as (select id from items where url = :purl), "
             "c as (select id from items where url = :curl ) "
@@ -219,6 +224,54 @@ class ItemStore(object):
         cur.execute(insert_select, {"purl": parent_name, "curl": child_name})
         self.con.commit()
         return True
+
+    def dissociate(self, parent_name: str, child_name: str) -> int:
+        """Remove the association between two items identified by url.
+
+        Args:
+            parent_name: URL of the parent item (the tag).
+            child_name: URL of the child item.
+
+        Returns:
+            Number of associations removed (0 if the items were not associated).
+
+        Raises:
+            sqlite.Error: If the delete operation fails.
+        """
+        cur = self.con.cursor()
+        cur.execute(
+            "DELETE FROM associations "
+            "WHERE parent = (select id from items where url = :purl) "
+            "AND child = (select id from items where url = :curl) ;",
+            {"purl": parent_name, "curl": child_name},
+        )
+        self.con.commit()
+        return cur.rowcount
+
+    def parents(self, name: str) -> list[Item]:
+        """Return the items directly associated as parents (tags) of an item.
+
+        Only direct parents are returned, not further ancestors.
+
+        Args:
+            name: URL of the item whose tags are wanted.
+
+        Returns:
+            List of parent Items ordered by url (empty if there are none, or
+            if no item has that url).
+
+        Raises:
+            sqlite.Error: If the query fails.
+        """
+        cur = self.con.cursor()
+        cur.execute(
+            "SELECT p.id, p.url, p.type FROM items AS p "
+            "JOIN associations ON associations.parent = p.id "
+            "JOIN items AS c ON associations.child = c.id "
+            "WHERE c.url = ? ORDER BY p.url ;",
+            (name,),
+        )
+        return [Item(item_id, item_type, url) for item_id, url, item_type in cur.fetchall()]
 
     def all_associations(self) -> list[tuple[int, int]]:
         """Return all parent/child associations as a list of (parent, child) tuples.
